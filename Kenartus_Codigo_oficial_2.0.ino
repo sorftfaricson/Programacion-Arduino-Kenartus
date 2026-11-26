@@ -1,3 +1,17 @@
+#include <Servo.h>
+Servo miServo1;
+Servo miServo2;
+
+
+// Variable para guardar la posición actual del servo
+int grado1 = 90;
+int grado2 = 180; 
+
+int PWMVelocidad = 0;
+
+int cicloServo1 = 0;
+int cicloServo2 = 0;
+
 char dato;
 char buffer[6];
 byte index = 0;
@@ -9,259 +23,173 @@ int X1 = 2, X2 = 3, X3 = 4;
 int Y1 = 5, Y2 = 6, Y3 = 7;
 int Z1 = 8, Z2 = 9, Z3 = 10;
 
+int PWMmotor = 11;
 
-int XS1 = 22;
-int XS2 = 23;
-int LecturaXSen1 = 0;
-int LecturaXSen2 = 0;
+const int pinServo1 = 12;
+const int pinServo2 = 13;
 
-int YS1 = 24; 
-int YS2 = 25;
-int LecturaYSen1 = 0;
-int LecturaYSen2 = 0;
+int XS1 = 22, XS2 = 23;
+int LecturaXSen1 = 0, LecturaXSen2 = 0;
 
-int ZS1 = 27;
-int ZS2 = 26;
-int LecturaZSen1 = 0;
-int LecturaZSen2 = 0;
+int YS1 = 24, YS2 = 25;
+int LecturaYSen1 = 0, LecturaYSen2 = 0;
 
-int tiempoX = 1;
-int tiempoY = 1;
-int tiempoZ = 1;
+int ZS1 = 27, ZS2 = 26;
+int LecturaZSen1 = 0, LecturaZSen2 = 0;
 
-int Movs = 0;
-int candadoX = 0;
-int candadoY = 0;
-int candadoZ = 0;
+int tiempoX = 1, tiempoY = 1, tiempoZ = 1;
 
+int Movs = 999;
+int candadoX = 0, candadoY = 0, candadoZ = 0;
+
+int RPierna = 0;
+int ContadorRP = 0;
+
+int RBrazo = 0;
+int ContadorRB = 0;
+
+
+int RCaminador = 0;
+int ContadorRC = 0;
+
+
+int RPSentado = 0;
+int ContadorRPS = 0;
+
+int ResRobot = 0;
+int resX = 0, resY = 0, resZ = 0;
+
+int pasoActual = 0;
 void setup() {
-  Serial1.begin(9600); // Usaremos Serial1 (pines 0 y 1)
+  Serial2.begin(9600);
+  Serial1.begin(9600); 
   Serial.begin(9600);
-  pinMode(X1, OUTPUT); 
-  pinMode(X2, OUTPUT); 
-  pinMode(X3, OUTPUT);
+  miServo1.attach(pinServo1);
+  miServo2.attach(pinServo2);
   
-  pinMode(Y1, OUTPUT); 
-  pinMode(Y2, OUTPUT); 
-  pinMode(Y3, OUTPUT);
+  pinMode(PWMmotor, OUTPUT);
   
-  pinMode(Z1, OUTPUT); 
-  pinMode(Z2, OUTPUT); 
-  pinMode(Z3, OUTPUT);
+  // Inicializar el servo en 0 grados
+  miServo1.write(90);
+  miServo2.write(180);
+  
+  
+  pinMode(X1, OUTPUT); pinMode(X2, OUTPUT); pinMode(X3, OUTPUT);
+  pinMode(Y1, OUTPUT); pinMode(Y2, OUTPUT); pinMode(Y3, OUTPUT);
+  pinMode(Z1, OUTPUT); pinMode(Z2, OUTPUT); pinMode(Z3, OUTPUT);
 
-  pinMode(XS1,INPUT);
-  pinMode(XS2,INPUT);
-  
-  pinMode(YS1, INPUT);
-  pinMode(YS2, INPUT);
-  pinMode(ZS1, INPUT);
-  pinMode(ZS2, INPUT);
+  pinMode(XS1, INPUT); pinMode(XS2, INPUT);
+  pinMode(YS1, INPUT); pinMode(YS2, INPUT);
+  pinMode(ZS1, INPUT); pinMode(ZS2, INPUT);
   
   memset(buffer, 0, sizeof(buffer));
+  
 }
+
 
 void loop() {
-   LecturaXSen1 = digitalRead(XS1);
-   LecturaXSen2 = digitalRead(XS2);
-   
-   LecturaYSen1 = digitalRead(YS1);
-   LecturaYSen2 = digitalRead(YS2);
+    actualizarSensores();
 
-   LecturaZSen1 = digitalRead(ZS1);
-   LecturaZSen2 = digitalRead(ZS2);
+    // Control manual por estados (si no hay rutina activa)
+    if (Movs == 999) {
+      if(LecturaXSen1 == HIGH && StateX == 1){ estadoXNada(); }
+      if(LecturaXSen1 == LOW  && StateX == 1){ estadoXPositivo(); }
+      if(LecturaXSen2 == HIGH && StateX == 2){ estadoXNada(); }
+      if(LecturaXSen2 == LOW  && StateX == 2){ estadoXNegativo(); }
+      if(StateX == 0){ estadoXNada(); }
 
-    if(LecturaXSen1 == HIGH){if(StateX == 1){estadoXNada();}}
-    if(LecturaXSen1 == LOW) {if(StateX == 1){estadoXPositivo();}}
-    if(LecturaXSen2 == HIGH){if(StateX == 2){estadoXNada();}}
-    if(LecturaXSen2 == LOW) {if(StateX == 2){estadoXNegativo();}}
-    if(StateX == 0){estadoXNada();}
+      if(LecturaYSen1 == HIGH && StateY == 1){ estadoYNada(); }
+      if(LecturaYSen1 == LOW  && StateY == 1){ estadoYPositivo(); }
+      if(LecturaYSen2 == HIGH && StateY == 2){ estadoYNada(); }
+      if(LecturaYSen2 == LOW  && StateY == 2){ estadoYNegativo(); }
+      if(StateY == 0){ estadoYNada(); }
 
-    if(LecturaYSen1 == HIGH){if(StateY == 1){estadoYNada();}}
-    if(LecturaYSen1 == LOW) {if(StateY == 1){estadoYPositivo();}}
-    if(LecturaYSen2 == HIGH){if(StateY == 2){estadoYNada();}}
-    if(LecturaYSen2 == LOW) {if(StateY == 2){estadoYNegativo();}}
-    if(StateY == 0){estadoYNada();}
-
-    if(LecturaZSen1 == HIGH){if(StateZ == 1){estadoZNada();}}
-    if(LecturaZSen1 == LOW) {if(StateZ == 1){estadoZPositivo();}}
-    if(LecturaZSen2 == HIGH){if(StateZ == 2){estadoZNada();}}
-    if(LecturaZSen2 == LOW) {if(StateZ == 2){estadoZNegativo();}}
-    if(StateZ == 0){estadoZNada();}
-
-    if (Serial1.available() > 0) {
-        ActividadSerial(Serial1);
-    }
-    if (Serial.available() > 0) {
-        ActividadSerial(Serial);
+      if(LecturaZSen1 == HIGH && StateZ == 1){ estadoZNada(); }
+      if(LecturaZSen1 == LOW  && StateZ == 1){ estadoZPositivo(); }
+      if(LecturaZSen2 == HIGH && StateZ == 2){ estadoZNada(); }
+      if(LecturaZSen2 == LOW  && StateZ == 2){ estadoZNegativo(); }
+      if(StateZ == 0){ estadoZNada(); }
     }
 
+    // Escucha de puertos Seriales
+    if (Serial1.available() > 0) ActividadSerial(Serial1);
+    if (Serial.available() > 0)  ActividadSerial(Serial);
+    if (Serial2.available() > 0) ActividadSerial(Serial2);
 
- 
 
-    if(Movs == 0){rutinaStop();}
-    if(Movs == 1){rutinaPierna();}
-    if(Movs == 2){rutinaBrazo();}
-    if(Movs == 3){rutinaCaminador();}
-    if(Movs == 4){rutinaPieSentado();}
+
+    // Ejecución secuencial de rutinas automáticas (un paso por vuelta de loop)
+    if(Movs == 0){ cicloServo1 = 0; cicloServo2 = 0; rutinaStop(); RPierna = 0; ContadorRP = 0; RBrazo=0; ContadorRB = 0; RCaminador = 0; ContadorRC = 0; RPSentado = 0; ContadorRPS = 0; Movs = 999; }
+    if(Movs == 1){ rutinaPierna(); }
+    if(Movs == 2){ rutinaBrazo(); }
+    if(Movs == 3){ /*rutinaCaminador();*/ rutinaCaminar(); }
+    if(Movs == 4){ rutinaPieSentado(); }
+    if(Movs == 5){ puntoInicio();}
+
+    analogWrite(PWMmotor,25 * PWMVelocidad);
 }
 
+
 void ActividadSerial(Stream &puerto){
-  
     dato = puerto.read();
 
-    //Si es un número, lo acumulamos
-    if (isDigit(dato) && index < 3) {
-      buffer[index++] = dato;
-      buffer[index] = '\0';
+    if (isDigit(dato)) {
+      if (index < 4) { // Evita desbordar el buffer de 6 posiciones
+        buffer[index++] = dato;
+        buffer[index] = '\0';
+      }
     } 
-    //Si es una letra, procesamos
     else {
-      valorRecibido = atoi(buffer); // Convertimos el número acumulado (si existe)
+      valorRecibido = atoi(buffer);
 
       switch (dato) {
-        // COMANDOS DE PASOS ESPECÍFICOS (Ej: "50X")
-
         case 'M':
-        if(valorRecibido == 0)
-        {
-          Movs = 0;
-          }
-         if(valorRecibido == 1)
-        {
-          Movs = 1;
-          }
-          if(valorRecibido == 2)
-        {
-          Movs = 2;
-          }
-          if(valorRecibido == 3)
-        {
-          Movs = 3;
-          }
-          if(valorRecibido == 4)
-        {
-          Movs = 4;
-          }
-        break;
+          if(valorRecibido == 0) {Movs = 0;}
+          if(valorRecibido == 1) {RPierna = 1;Movs = 1;}
+          if(valorRecibido == 2) {RBrazo = 1;Movs = 2;}
+          if(valorRecibido == 3) {cicloServo1 = 1; cicloServo2 = 1; RCaminador = 1;Movs = 3;}
+          if(valorRecibido == 4) {RPSentado = 1;Movs = 4;}
+          if(valorRecibido == 5) {ResRobot = 1;Movs = 5;}
+          break;
         
         case '*':
-        if(valorRecibido == 0)
-        {
-          candadoX = 0;
-          }
-        if(valorRecibido == 1)
-        {
-          candadoX = 1;
-          }
-        if(valorRecibido == 2)
-        {
-          candadoY = 0;
-          }
-        if(valorRecibido == 3)
-        {
-          candadoY = 1;
-          }
-        if(valorRecibido == 4)
-        {
-          candadoZ = 0;
-          }
-        if(valorRecibido == 5)
-        {
-          candadoZ = 1;
-          }
+          if(valorRecibido == 0) candadoX = 0;
+          if(valorRecibido == 1) candadoX = 1;
+          if(valorRecibido == 2) candadoY = 0;
+          if(valorRecibido == 3) candadoY = 1;
+          if(valorRecibido == 4) candadoZ = 0;
+          if(valorRecibido == 5) candadoZ = 1;
+          break;
 
-         break;
+        case 't': tiempoX = valorRecibido; break;
+        case 'u': tiempoY = valorRecibido; break;
+        case 'v': tiempoZ = valorRecibido; break;
+        
+        case 'C': PWMVelocidad = valorRecibido; break;
+        
+        case 'X': moverPasos('X', valorRecibido); break;
+        case 'Y': moverPasos('Y', valorRecibido); break;
+        case 'Z': moverPasos('Z', valorRecibido); break;
+        case 'x': moverPasos('x', valorRecibido); break;
+        case 'y': moverPasos('y', valorRecibido); break;
+        case 'z': moverPasos('z', valorRecibido); break;
 
+        case 'a': StateX = 0; puerto.println("NadaX"); break;
+        case 'b': StateX = 1; puerto.println("X+");break;
+        case 'c': StateX = 2; puerto.println("X-");break;
+        
+        case 'd': StateY = 0; puerto.println("NadaY"); break;
+        case 'e': StateY = 1; puerto.println("Y+"); break;
+        case 'f': StateY = 2; puerto.println("Y-"); break;
 
-        
-        case 't':
-        tiempoX = valorRecibido; 
-        break;
+        case 'g': StateZ = 0; puerto.println("NadaZ"); break;
+        case 'h': StateZ = 1; puerto.println("Z+"); break;
+        case 'i': StateZ = 2; puerto.println("Z-"); break;
 
-        case 'u':
-        tiempoY = valorRecibido; 
-        break;
-
-        case 'v':
-        tiempoZ = valorRecibido; 
-        break;
-
-        
-        case 'X':
-        moverPasos('X', valorRecibido); 
-        break;
-        
-        case 'Y': 
-        moverPasos('Y', valorRecibido); 
-        break;
-        
-        case 'Z': 
-        moverPasos('Z', valorRecibido); 
-        break;
-
-        case 'x':
-        moverPasos('x', valorRecibido); 
-        break;
-        
-        case 'y': 
-        moverPasos('y', valorRecibido); 
-        break;
-        
-        case 'z': 
-        moverPasos('z', valorRecibido); 
-        break;
-
-        // COMANDOS DE ESTADO (Tus letras originales)
-        case 'a': 
-        StateX = 0; 
-        
-        break;
-
-        case 'b': 
-        StateX = 1; 
-        
-        break;
-        
-        case 'c': 
-        StateX = 2; 
-         
-        break;
-        
-        case 'd': 
-        StateY = 0; 
-        puerto.println("NadaY"); 
-        break;
-        case 'e': 
-        StateY = 1; 
-        puerto.println("Y+"); 
-        break;
-        
-        case 'f': 
-        StateY = 2; 
-        puerto.println("Y-"); 
-        break;
-
-        case 'g': 
-        StateZ = 0; 
-        puerto.println("NadaZ"); 
-        break;
-        
-        case 'h': 
-        StateZ = 1; 
-        puerto.println("Z+"); 
-        break;
-        
-        case 'i': 
-        StateZ = 2; 
-        puerto.println("Z-"); 
-        break;
-
-         // SALTOS DE LÍNEA (Ignorar invisiblemente)
         case '\n':
         case '\r': 
           break;
 
-        // CARÁCTER NO RECONOCIDO
         default:
           puerto.print("Error: Caracter '");
           puerto.print(dato);
@@ -269,231 +197,12 @@ void ActividadSerial(Stream &puerto){
           break;
       }
       
-      // Limpiar buffer después de cualquier letra
       index = 0;
       memset(buffer, 0, sizeof(buffer));
     }
-  
-  }
-
-
-void rutinaStop(){
-  estadoXNada();
-  estadoYNada();
-  estadoZNada();
-  
-  
-  }
-
-void rutinaPierna(){
-  for (int i = 0; i <50 ; i++) 
-  {
-    estadoZPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-  for (int i = 0; i <50 ; i++) 
-  {
-    estadoZNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-  
-  }
-
-  
-  void rutinaBrazo(){
-    
-  for (int i = 0; i < 50 ; i++) 
-  {
-    estadoZPositivo();
-    estadoYPositivo();
-    estadoXPositivo();
-    estadoZPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-
-  for (int i = 0; i < 50 ; i++) 
-  {
-    estadoZNegativo();
-    estadoYNegativo();
-    estadoXNegativo();
-    estadoZNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-
-  for (int i = 0; i < 50 ; i++) 
-  {
-    estadoZPositivo();
-    estadoYPositivo();
-    estadoXNegativo();
-    estadoZPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-
-  for (int i = 0; i < 50 ; i++) 
-  {
-    estadoZNegativo();
-    estadoYNegativo();
-    estadoXPositivo();
-    estadoZNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-  
-  }
-
-
-
-
-void rutinaCaminador()
-{
-  
-
-    //Inicio
-    for (int i = 0; i < 50 ; i++) 
-  {
-    estadoYNegativo();
-    estadoYNegativo();
-    estadoXPositivo();
-    estadoXPositivo();
-    estadoYNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYNegativo();
-    estadoYNegativo();
-    estadoXNegativo();
-    estadoXNegativo();
-    estadoYNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYNegativo();
-    estadoYNegativo();
-    estadoXPositivo();
-    estadoXPositivo();
-    estadoYNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYNegativo();
-    estadoYNegativo();
-    estadoXNegativo();
-    estadoXNegativo();
-    estadoYNegativo();
-    estadoYNegativo();
-    }
-    delay(500);
-
-    //regreso
-    for (int i = 0; i < 50 ; i++) 
-  {
-    estadoYPositivo();
-    estadoYPositivo();
-    estadoXPositivo();
-    estadoXPositivo();
-    estadoYPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYPositivo();
-    estadoYPositivo();
-    estadoXNegativo();
-    estadoXNegativo();
-    estadoYPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYPositivo();
-    estadoYPositivo();
-    estadoXPositivo();
-    estadoXPositivo();
-    estadoYPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoYPositivo();
-    estadoYPositivo();
-    estadoXNegativo();
-    estadoXNegativo();
-    estadoYPositivo();
-    estadoYPositivo();
-    }
-    delay(500);
-
-  
-  }
-
-void rutinaPieSentado(){
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoZPositivo();
-    estadoYNegativo();
-    
-    }
-    delay(500);
-    for (int i = 0; i < 50 ; i++) 
-    {
-    estadoZNegativo();
-    estadoYPositivo();
-    }
-    delay(500);
-
-    
-    }
-
-
-
-
-void moverPasos(char eje, int pasos) {
-
-  
-  for (int i = 0; i < pasos; i++) 
-  {
-    if (eje == 'X'){
-      estadoXPositivo();
-    }
-    if (eje == 'Y'){
-      estadoYPositivo();
-    }
-    if (eje == 'Z'){
-      estadoZPositivo();
-    }
-
-    if (eje == 'x'){
-      estadoXNegativo();
-    }
-    if (eje == 'y'){
-      estadoYNegativo();
-    }
-    if (eje == 'z'){
-      estadoZNegativo();
-    }
-  }
-
- 
-
-  
 }
 
-
-
+ //esta funcion solo se llama una ves y ya 
 void estadoXNada() { 
   if(candadoX == 0){
   digitalWrite(X1, 1); 
@@ -529,7 +238,7 @@ void estadoXNegativo() {
   digitalWrite(X3, 1); 
   delay(tiempoX);
 }
-
+//esta funcion solo se llama una ves y ya 
 void estadoYNada() {
   if(candadoY == 0){
   digitalWrite(Y1, 1); 
@@ -564,7 +273,7 @@ void estadoYNegativo() {
   delay(tiempoY);
 }
 
-
+//esta funcion solo se llama una ves y ya 
 void estadoZNada() { 
   if(candadoZ == 0){
   digitalWrite(Z1, 1); 
@@ -597,4 +306,126 @@ void estadoZNegativo() {
   digitalWrite(Z2, 0); 
   digitalWrite(Z3, 1); 
   delay(tiempoZ);
+}
+
+
+
+void actualizarSensores() {
+  LecturaXSen1 = digitalRead(XS1);
+  LecturaXSen2 = digitalRead(XS2);
+  LecturaYSen1 = digitalRead(YS1);
+  LecturaYSen2 = digitalRead(YS2);
+  LecturaZSen1 = digitalRead(ZS1);
+  LecturaZSen2 = digitalRead(ZS2);
+}
+
+
+
+// FUNCIÓN MOVER PASOS REVISADA Y SEGURA
+void moverPasos(char eje, int pasos) {
+  for (int i = 0; i < pasos; i++) {
+    actualizarSensores(); // Monitoreo en tiempo real
+
+    if (eje == 'X') { if (LecturaXSen1 == LOW) { estadoXPositivo(); resX = 0; } else { estadoXNada(); resX = 1; break; } }
+    if (eje == 'x') { if (LecturaXSen2 == LOW) { estadoXNegativo(); } else { estadoXNada(); break; } }
+    if (eje == 'Y') { if (LecturaYSen1 == LOW) { estadoYPositivo(); resY = 0; } else { estadoYNada(); resY = 1; break; } }
+    if (eje == 'y') { if (LecturaYSen2 == LOW) { estadoYNegativo(); } else { estadoYNada(); break; } }
+    if (eje == 'Z') { if (LecturaZSen1 == LOW) { estadoZPositivo(); resZ = 0; } else { estadoZNada(); resZ = 1; break; } }
+    if (eje == 'z') { if (LecturaZSen2 == LOW) { estadoZNegativo(); } else { estadoZNada(); break; } }
+    
+    delay(1); // Pequeña pausa física indispensable para el motor
+  }
+}
+
+
+
+
+void rutinaPierna() {
+delay(1);
+if (RPierna == 1)
+{
+  moverPasos('Z',1);
+  moverPasos('y',1);
+  ContadorRP++;
+  if(ContadorRP >= 150){delay(500); RPierna = 2;}
+  }
+
+if (RPierna == 2)
+{
+  moverPasos('z',1);
+  moverPasos('Y',1);
+  ContadorRP--;
+  if(ContadorRP <= 0){delay(500); RPierna = 1;}
+  }
+
+  if (RPierna == 0){ContadorRP = 0;}
+}
+
+
+
+
+void rutinaBrazo() {
+  delay(1);
+  if(RBrazo == 1){moverPasos('Z',1);moverPasos('y',1);moverPasos('X',1);moverPasos('Z',1);moverPasos('y',1);ContadorRB++;if(ContadorRB == 50){delay(500);RBrazo = 2;}}
+  if(RBrazo == 2){moverPasos('z',1);moverPasos('Y',1);moverPasos('x',1);moverPasos('z',1);moverPasos('Y',1);ContadorRB++;if(ContadorRB == 100){delay(500);RBrazo = 3;}}
+  if(RBrazo == 3){moverPasos('Z',1);moverPasos('y',1);moverPasos('x',1);moverPasos('Z',1);moverPasos('y',1);ContadorRB++;if(ContadorRB == 150){delay(500);RBrazo = 4;}}
+  if(RBrazo == 4){moverPasos('z',1);moverPasos('Y',1);moverPasos('X',1);moverPasos('z',1);moverPasos('Y',1);ContadorRB++;if(ContadorRB == 200){delay(500);ContadorRB = 0;RBrazo = 1;}}
+  if(RBrazo == 0){ContadorRB == 0;}
+}
+
+
+void rutinaCaminador() {
+  delay(1);
+  if(RCaminador == 1){moverPasos('y',1);moverPasos('X',1); moverPasos('y',1);moverPasos('X',1);moverPasos('y',1);moverPasos('y',1);ContadorRC++;if(ContadorRC == 50){delay(500);RCaminador = 2;}}
+  if(RCaminador == 2){moverPasos('y',1);moverPasos('x',1); moverPasos('y',1);moverPasos('x',1);moverPasos('y',1);moverPasos('y',1);ContadorRC++;if(ContadorRC == 100){delay(500);RCaminador = 3;}}
+  if(RCaminador == 3){moverPasos('y',1);moverPasos('X',1); moverPasos('y',1);moverPasos('X',1);moverPasos('y',1);moverPasos('y',1);ContadorRC++;if(ContadorRC == 150){delay(500);RCaminador = 4;}}
+  if(RCaminador == 4){moverPasos('y',1);moverPasos('x',1); moverPasos('y',1);moverPasos('x',1);moverPasos('y',1);moverPasos('y',1);ContadorRC++;if(ContadorRC == 200){delay(500);RCaminador = 5;}}
+  if(RCaminador == 5){moverPasos('Y',1);moverPasos('X',1); moverPasos('Y',1);moverPasos('X',1);moverPasos('Y',1);moverPasos('Y',1);ContadorRC++;if(ContadorRC == 250){delay(500);RCaminador = 6;}}
+  if(RCaminador == 6){moverPasos('Y',1);moverPasos('x',1); moverPasos('Y',1);moverPasos('x',1);moverPasos('Y',1);moverPasos('Y',1);ContadorRC++;if(ContadorRC == 300){delay(500);RCaminador = 7;}}
+  if(RCaminador == 7){moverPasos('Y',1);moverPasos('X',1); moverPasos('Y',1);moverPasos('X',1);moverPasos('Y',1);moverPasos('Y',1);ContadorRC++;if(ContadorRC == 350){delay(500);RCaminador = 8;}}
+  if(RCaminador == 8){moverPasos('Y',1);moverPasos('x',1); moverPasos('Y',1);moverPasos('x',1);moverPasos('Y',1);moverPasos('Y',1);ContadorRC++;if(ContadorRC == 400){delay(500);ContadorRC = 0;RCaminador = 1;}}
+  if(RCaminador == 0){ContadorRC = 0;}
+}
+
+void rutinaCaminar(){
+  if(cicloServo1 == 0){miServo1.write(90);}
+  if(cicloServo1 == 1){miServo1.write(grado1);delay(10);grado1 = grado1 - 1;
+     if(grado1 <= 0){cicloServo1 = 2;}}
+  if(cicloServo1 == 2){miServo1.write(grado1);delay(10);grado1 = grado1 + 1;
+     if(grado1 >= 90){cicloServo1 = 1;}}
+/////////////////////////////////////////////////////////
+  if(cicloServo2 == 0){miServo2.write(180);}
+  if(cicloServo2 == 1){miServo2.write(grado2);delay(10);grado2 = grado2 - 1;
+     if(grado2 <= 90){cicloServo2 = 2;}}
+  if(cicloServo2 == 2){miServo2.write(grado2);delay(10);grado2 = grado2 + 1;
+     if(grado2 >= 180){cicloServo2 = 1;}}
+     }
+
+void rutinaNoCaminar(){miServo1.write(90);miServo2.write(180);}
+
+void rutinaPieSentado() {
+  delay(1);
+  if(RPSentado == 1){moverPasos('Z',1);/*moverPasos('y',1);*/ContadorRPS++;if(ContadorRPS == 300){delay(500);RPSentado = 2;}}
+  if(RPSentado == 2){moverPasos('z',1);/*moverPasos('Y',1);*/ContadorRPS++;if(ContadorRPS == 600){delay(500);ContadorRPS = 0; RPSentado = 1;}}
+  if(RPSentado == 0){ContadorRPS = 0;}
+}
+
+void puntoInicio(){
+  delay(1);
+  if(ResRobot == 1){
+    if(resX == 1 && resY == 1 && resZ == 1){
+    Movs = 999;
+    ResRobot = 0;
+    resX = 0; resY = 0; resZ = 0;
+    }
+    else{
+    moverPasos('Z',1);
+    moverPasos('Y',1);
+    moverPasos('X',1);}
+    }
+  }
+
+void rutinaStop(){
+  estadoXNada(); estadoYNada(); estadoZNada();rutinaNoCaminar();
+
 }
